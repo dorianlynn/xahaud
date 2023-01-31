@@ -151,6 +151,7 @@ message(\"WasmEdge DONE\")
 " > Builds/CMake/deps/WasmEdge.cmake &&
 
 echo "MOVING TO [ build-core.sh ]"
+cd /io;
 ./build-core.sh "$1" "$2" "$3"
 echo "END [ build-core.sh ]"
 
