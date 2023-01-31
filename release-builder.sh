@@ -32,12 +32,23 @@ fi
 
 STATIC_CONTAINER=$(docker ps -a | grep xahaud_cached_builder |wc -l)
 
-if [[ "$STATIC_CONTAINER" -gt "0" ]]; then
+if [[ [ "$STATIC_CONTAINER" -gt "0" ] && [ "$GITHUB_REPOSITORY" == "" ] ]]; then
   echo "Static container, execute in static container to have max. cache"
+  docker start xahaud_cached_builder
   docker exec -i xahaud_cached_builder /hbb_exe/activate-exec bash -x /io/build-core.sh "$GITHUB_REPOSITORY" "$GITHUB_SHA" "$BUILD_CORES"
+  docker stop xahaud_cached_builder
 else
   echo "No static container, build on temp container"
-  docker run -i --user 0:$(id -g) --rm  -v `pwd`:/io --network host ghcr.io/foobarwidget/holy-build-box-x64 /hbb_exe/activate-exec bash -x /io/build-full.sh "$GITHUB_REPOSITORY" "$GITHUB_SHA" "$BUILD_CORES"
+  if [[ "$GITHUB_REPOSITORY" == "" ]]; then
+    # Non GH, local building
+    echo "Non-GH runner, local building, temp container"
+    docker run -i --user 0:$(id -g) --rm -v `pwd`:/io --network host ghcr.io/foobarwidget/holy-build-box-x64 /hbb_exe/activate-exec bash -x /io/build-full.sh "$GITHUB_REPOSITORY" "$GITHUB_SHA" "$BUILD_CORES"
+  else
+    # GH Action, runner
+    echo "GH Action, runner, clean & re-create create persistent container"
+    docker run -i --user 0:$(id -g) --name xahaud_cached_builder -v `pwd`:/io --network host ghcr.io/foobarwidget/holy-build-box-x64 /hbb_exe/activate-exec bash -x /io/build-full.sh "$GITHUB_REPOSITORY" "$GITHUB_SHA" "$BUILD_CORES"
+    docker stop xahaud_cached_builder
+  fi
 fi
 
 echo "DONE BUILDING (HOST)"
