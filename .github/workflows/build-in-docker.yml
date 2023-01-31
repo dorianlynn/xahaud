@@ -22,4 +22,4 @@ jobs:
           release-build/xahaud
           release-build/release.info
     - name: Unit tests
-      run: /bin/bash release-build/xahaud -u
+      run: /bin/bash docker-unit-tests.sh
