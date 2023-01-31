@@ -1,6 +1,14 @@
 #!/bin/bash
 
-echo "START INSIDE CONTAINER"
+echo "START INSIDE CONTAINER - FULL"
+
+echo "d1"
+echo $1
+
+echo "d2"
+echo $2
+
+exit 0
 
 umask 0000;
 cd /io;
@@ -165,4 +173,4 @@ mv src/ripple/net/impl/RegisterSSLCerts.cpp.old src/ripple/net/impl/RegisterSSLC
 mv Builds/CMake/deps/Rocksdb.cmake.old Builds/CMake/deps/Rocksdb.cmake;
 mv Builds/CMake/deps/WasmEdge.old Builds/CMake/deps/WasmEdge.cmake;
 
-echo "END INSIDE CONTAINER"
+echo "END INSIDE CONTAINER - FULL"
