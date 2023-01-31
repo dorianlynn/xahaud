@@ -10,6 +10,12 @@ echo "-- GITHUB_RUN_NUMBER: $4"
 umask 0000;
 
 export PATH=`echo $PATH | sed -E "s/devtoolset-9/devtoolset-10/g"` &&
+
+export BOOST_ROOT="/usr/local/src/boost_1_75_0" &&
+export Boost_LIBRARY_DIRS="/usr/local/lib" &&
+export BOOST_INCLUDEDIR="/usr/local/src/boost_1_75_0" &&
+export PATH=`echo $PATH | sed -E "s/devtoolset-7/devtoolset-9/g"` &&
+
 cd /io/ &&
 git checkout src/ripple/protocol/impl/BuildInfo.cpp &&
 sed -i s/\"0.0.0\"/\"$(date +%s)-$(git rev-parse --abbrev-ref HEAD)-$4\"/g src/ripple/protocol/impl/BuildInfo.cpp &&

@@ -17,7 +17,7 @@ jobs:
       run: /bin/bash release-builder.sh
     - uses: actions/upload-artifact@v3
       with:
-        name: build-${{ env.GITHUB_RUN_NUMBER }}
+        name: build-${{ github.run_number }}
         path: |
           release-build/xahaud
           release-build/release.info

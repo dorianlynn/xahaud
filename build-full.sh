@@ -157,3 +157,6 @@ cd /io;
 echo "END [ build-core.sh ]"
 
 echo "END INSIDE CONTAINER - FULL"
+
+echo "-- Built with env vars:"
+printenv
