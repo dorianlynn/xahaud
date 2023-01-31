@@ -32,7 +32,7 @@ fi
 
 STATIC_CONTAINER=$(docker ps -a | grep xahaud_cached_builder |wc -l)
 
-if [[ [ "$STATIC_CONTAINER" -gt "0" ] && [ "$GITHUB_REPOSITORY" == "" ] ]]; then
+if [[ "$STATIC_CONTAINER" -gt "0" && "$GITHUB_REPOSITORY" == "" ]]; then
   echo "Static container, execute in static container to have max. cache"
   docker start xahaud_cached_builder
   docker exec -i xahaud_cached_builder /hbb_exe/activate-exec bash -x /io/build-core.sh "$GITHUB_REPOSITORY" "$GITHUB_SHA" "$BUILD_CORES"
