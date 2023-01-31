@@ -5,6 +5,7 @@ echo "START INSIDE CONTAINER - FULL"
 echo "-- BUILD CORES:       $3"
 echo "-- GITHUB_REPOSITORY: $1"
 echo "-- GITHUB_SHA:        $2"
+echo "-- GITHUB_RUN_NUMBER: $4"
 
 umask 0000;
 
@@ -152,7 +153,7 @@ message(\"WasmEdge DONE\")
 
 echo "MOVING TO [ build-core.sh ]"
 cd /io;
-./build-core.sh "$1" "$2" "$3"
+./build-core.sh "$1" "$2" "$3" "$4"
 echo "END [ build-core.sh ]"
 
 echo "END INSIDE CONTAINER - FULL"
