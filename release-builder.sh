@@ -2,12 +2,17 @@
 
 echo "START BUILDING (HOST)"
 
-echo "GITHUB_ACTION:"
-echo $GITHUB_ACTION
-echo "GITHUB_JOB:"
-echo $GITHUB_JOB
+BUILD_CORES=8
 
-docker run -i --user 0:$(id -g) --rm  -v `pwd`:/io --network host ghcr.io/foobarwidget/holy-build-box-x64 /hbb_exe/activate-exec bash -x /io/build-full.sh "$GITHUB_ACTION" "$GITHUB_JOB"
+if [[ "$GITHUB_REPOSITORY" -eq "" ]]; then
+  BUILD_CORES=$(echo "scale=0 ; `nproc` / 3" | bc)
+fi
+
+echo "-- GITHUB_REPOSITORY: $GITHUB_REPOSITORY"
+echo "-- GITHUB_SHA:        $GITHUB_SHA"
+echo "-- BUILD CORES:       $BUILD_CORES"
+
+docker run -i --user 0:$(id -g) --rm  -v `pwd`:/io --network host ghcr.io/foobarwidget/holy-build-box-x64 /hbb_exe/activate-exec bash -x /io/build-full.sh "$GITHUB_REPOSITORY" "$GITHUB_SHA" "$BUILD_CORES"
 
 exit 0
 
@@ -24,6 +29,6 @@ then
   echo 'Run this inside the source directory. (.git dir not found).'
   exit 1
 fi
-docker run -i --user 0:$(id -g) --rm  -v `pwd`:/io --network host ghcr.io/foobarwidget/holy-build-box-x64 /hbb_exe/activate-exec bash -x /io/build-full.sh "$GITHUB_ACTION" "$GITHUB_JOB"
+docker run -i --user 0:$(id -g) --rm  -v `pwd`:/io --network host ghcr.io/foobarwidget/holy-build-box-x64 /hbb_exe/activate-exec bash -x /io/build-full.sh "$GITHUB_REPOSITORY" "$GITHUB_SHA" "$BUILD_CORES"
 
 echo "DONE BUILDING (HOST)"

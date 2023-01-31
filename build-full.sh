@@ -2,11 +2,11 @@
 
 echo "START INSIDE CONTAINER - FULL"
 
-echo "d1"
-echo $1
+echo "-- GITHUB_REPOSITORY: $1"
+echo "-- GITHUB_SHA:        $2"
+echo "-- BUILD CORES:       $3"
 
-echo "d2"
-echo $2
+./build-core.sh "$1" "$2" "$3"
 
 exit 0
 
