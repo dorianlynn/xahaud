@@ -2,15 +2,12 @@
 
 echo "START INSIDE CONTAINER - FULL"
 
+echo "-- BUILD CORES:       $3"
 echo "-- GITHUB_REPOSITORY: $1"
 echo "-- GITHUB_SHA:        $2"
-echo "-- BUILD CORES:       $3"
-
-./build-core.sh "$1" "$2" "$3"
-
-exit 0
 
 umask 0000;
+
 cd /io;
 mkdir src/certs;
 curl --silent -k https://raw.githubusercontent.com/RichardAH/rippled-release-builder/main/ca-bundle/certbundle.h -o src/certs/certbundle.h;
@@ -79,7 +76,7 @@ ZSTD_VERSION="1.1.3" &&
 ( wget -nc -q -O zstd-${ZSTD_VERSION}.tar.gz https://github.com/facebook/zstd/archive/v${ZSTD_VERSION}.tar.gz; echo "" ) &&
 tar xzvf zstd-${ZSTD_VERSION}.tar.gz &&
 cd zstd-${ZSTD_VERSION} &&
-make -j8 install &&
+make -j$3 install &&
 cd .. &&
 echo "-- Install Cmake 3.23.1 --" &&
 pwd &&
@@ -89,14 +86,14 @@ echo "-- Install Boost 1.75.0 --" &&
 pwd &&
 ( wget -nc -q https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.gz; echo "" ) &&
 tar -xzf boost_1_75_0.tar.gz &&
-cd boost_1_75_0 && ./bootstrap.sh && ./b2  link=static -j8 && ./b2 install &&
+cd boost_1_75_0 && ./bootstrap.sh && ./b2  link=static -j$3 && ./b2 install &&
 cd ../ &&
 echo "-- Install Protobuf 3.20.0 --" &&
 pwd &&
 ( wget -nc -q https://github.com/protocolbuffers/protobuf/releases/download/v3.20.0/protobuf-all-3.20.0.tar.gz; echo "" ) &&
 tar -xzf protobuf-all-3.20.0.tar.gz &&
 cd protobuf-3.20.0/ &&
-./autogen.sh && ./configure --prefix=/usr --disable-shared link=static && make -j8 && make install &&
+./autogen.sh && ./configure --prefix=/usr --disable-shared link=static && make -j$3 && make install &&
 cd .. &&
 echo "-- Build LLD --" &&
 pwd &&
@@ -113,7 +110,7 @@ rm -rf build CMakeCache.txt &&
 mkdir build &&
 cd build &&
 cmake .. -DLLVM_LIBRARY_DIR=/usr/lib64/llvm13/lib/ -DCMAKE_INSTALL_PREFIX=/usr/lib64/llvm13/ -DCMAKE_BUILD_TYPE=Release &&
-make -j8 install &&
+make -j$3 install &&
 ln -s /usr/lib64/llvm13/lib/include/lld /usr/include/lld &&
 cp /usr/lib64/llvm13/lib/liblld*.a /usr/local/lib/ &&
 cd ../../ &&
@@ -136,7 +133,7 @@ cmake .. \
     -DWASMEDGE_BUILD_PLUGINS=OFF \
     -DWASMEDGE_LINK_TOOLS_STATIC=ON \
     -DBoost_NO_BOOST_CMAKE=ON -DLLVM_DIR=/usr/lib64/llvm13/lib/cmake/llvm/ -DLLVM_LIBRARY_DIR=/usr/lib64/llvm13/lib/ &&
-make -j8 install &&
+make -j$3 install &&
 export PATH=`echo $PATH | sed -E "s/devtoolset-9/devtoolset-10/g"` &&
 cp -r include/api/wasmedge /usr/include/ &&
 cd /io/ &&
@@ -154,23 +151,9 @@ target_link_libraries (ripple_libs INTERFACE wasmedge)
 add_library (NIH::WasmEdge ALIAS wasmedge)
 message(\"WasmEdge DONE\")
 " > Builds/CMake/deps/WasmEdge.cmake &&
-cd release-build &&
-cmake .. -DBoost_NO_BOOST_CMAKE=ON -DLLVM_DIR=/usr/lib64/llvm13/lib/cmake/llvm/ -DLLVM_LIBRARY_DIR=/usr/lib64/llvm13/lib/ -DWasmEdge_LIB=/usr/local/lib64/libwasmedge.a &&
-make -j8 VERBOSE=1 &&
-strip -s rippled &&
-mv rippled xahaud &&
-echo "Build host: `hostname`" > release.info &&
-echo "Build date: `date`" >> release.info &&
-echo "Build md5: `md5sum xahaud`" >> release.info &&
-echo "Git remotes:" >> release.info && 
-git remote -v >> release.info 
-echo "Git status:" >> release.info &&
-git status -v >> release.info &&
-echo "Git log [last 20]:" >> release.info &&
-git log -n 20 >> release.info;
-cd ..;
-mv src/ripple/net/impl/RegisterSSLCerts.cpp.old src/ripple/net/impl/RegisterSSLCerts.cpp;
-mv Builds/CMake/deps/Rocksdb.cmake.old Builds/CMake/deps/Rocksdb.cmake;
-mv Builds/CMake/deps/WasmEdge.old Builds/CMake/deps/WasmEdge.cmake;
+
+echo "MOVING TO [ build-core.sh ]"
+./build-core.sh "$1" "$2" "$3"
+echo "END [ build-core.sh ]"
 
 echo "END INSIDE CONTAINER - FULL"

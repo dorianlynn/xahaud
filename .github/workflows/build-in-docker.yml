@@ -17,5 +17,11 @@ jobs:
       run: /bin/bash release-builder.sh
     - uses: actions/upload-artifact@v3
       with:
-        name: build
+        name: build-$GITHUB_SHA
         path: release-build/xahaud
+    - uses: actions/upload-artifact@v3
+      with:
+        name: releaseinfo-$GITHUB_SHA
+        path: release-build/release.info
+    - name: Unit tests
+      run: /bin/bash release-build/xahaud -u
