@@ -8,6 +8,7 @@ echo "-- GITHUB_SHA:        $2"
 
 umask 0000;
 
+export PATH=`echo $PATH | sed -E "s/devtoolset-9/devtoolset-10/g"` &&
 cd /io/ &&
 cd release-build &&
 cmake .. -DBoost_NO_BOOST_CMAKE=ON -DLLVM_DIR=/usr/lib64/llvm13/lib/cmake/llvm/ -DLLVM_LIBRARY_DIR=/usr/lib64/llvm13/lib/ -DWasmEdge_LIB=/usr/local/lib64/libwasmedge.a &&
