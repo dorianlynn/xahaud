@@ -46,6 +46,7 @@ else
   else
     # GH Action, runner
     echo "GH Action, runner, clean & re-create create persistent container"
+    docker rm -f xahaud_cached_builder
     docker run -i --user 0:$(id -g) --name xahaud_cached_builder -v `pwd`:/io --network host ghcr.io/foobarwidget/holy-build-box-x64 /hbb_exe/activate-exec bash -x /io/build-full.sh "$GITHUB_REPOSITORY" "$GITHUB_SHA" "$BUILD_CORES"
     docker stop xahaud_cached_builder
   fi
