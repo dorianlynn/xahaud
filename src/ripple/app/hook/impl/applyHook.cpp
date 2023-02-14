@@ -1226,7 +1226,7 @@ set_state_cache(
 {
     auto& stateMap = hookCtx.result.stateMap;
 
-    if (modified && stateMap.modified_entry_count > max_state_modifications)
+    if (modified && stateMap.modified_entry_count >= max_state_modifications)
         return TOO_MANY_STATE_MODIFICATIONS;
 
     if (stateMap.find(acc) == stateMap.end())
