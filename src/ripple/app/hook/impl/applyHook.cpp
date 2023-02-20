@@ -3473,15 +3473,20 @@ DEFINE_HOOK_FUNCTION(
 }
 
 
+// these are only used by get_stobject_length below
+enum parse_error : int32_t
+{
+    pe_unexpected_end = -1,
+    pe_unknown_type_early = -2, // detected early
+    pe_unknown_type_late = -3,  // end of function
+    pe_excessive_nesting = -4,
+    pe_excessive_size = -5
+};
+
 // RH NOTE this is a light-weight stobject parsing function for drilling into a provided serialzied object
 // however it could probably be replaced by an existing class or routine or set of routines in XRPLD
 // Returns object length including header bytes (and footer bytes in the event of array or object)
 // negative indicates error
-// -1 = unexpected end of bytes
-// -2 = unknown type (detected early)
-// -3 = unknown type (end of function)
-// -4 = excessive stobject nesting
-// -5 = excessively large array or object
 inline int32_t get_stobject_length (
     unsigned char* start,   // in - begin iterator
     unsigned char* maxptr,  // in - end iterator
@@ -3492,14 +3497,14 @@ inline int32_t get_stobject_length (
     int recursion_depth = 0)   // used internally
 {
     if (recursion_depth > 10)
-        return -4;
+        return pe_excessive_nesting;
 
     unsigned char* end = maxptr;
     unsigned char* upto = start;
     int high = *upto >> 4;
     int low = *upto & 0xF;
 
-    upto++; if (upto >= end) return -1;
+    upto++; if (upto >= end) return pe_unexpected_end;
     if (high > 0 && low > 0)
     {
         // common type common field
@@ -3516,13 +3521,13 @@ inline int32_t get_stobject_length (
     } else {
         // uncommon type and field
         type = *upto++;
-        if (upto >= end) return -1;
+        if (upto >= end) return pe_unexpected_end;
         field = *upto++;
     }
 
     DBG_PRINTF("%d get_st_object found field %d type %d\n", recursion_depth, field, type);
 
-    if (upto >= end) return -1;
+    if (upto >= end) return pe_unexpected_end;
 
     // RH TODO: link this to rippled's internal STObject constants
     // E.g.:
@@ -3532,7 +3537,7 @@ inline int32_t get_stobject_length (
     */
 
     if (type < 1 || type > 19 || ( type >= 9 && type <= 13))
-        return -2;
+        return pe_unknown_type_early;
 
     bool is_vl = (type == 8 /*ACCID*/ || type == 7 || type == 18 || type == 19);
 
@@ -3542,7 +3547,7 @@ inline int32_t get_stobject_length (
     {
         length = *upto++;
         if (upto >= end)
-            return -1;
+            return pe_unexpected_end;
 
         if (length < 193)
         {
@@ -3551,12 +3556,12 @@ inline int32_t get_stobject_length (
         {
             length -= 193;
             length *= 256;
-            length += *upto++ + 193; if (upto > end) return -1;
+            length += *upto++ + 193; if (upto > end) return pe_unexpected_end;
         } else {
-            int b2 = *upto++; if (upto >= end) return -1;
+            int b2 = *upto++; if (upto >= end) return pe_unexpected_end;
             length -= 241;
             length *= 65536;
-            length += 12481 + (b2 * 256) + *upto++; if (upto >= end) return -1;
+            length += 12481 + (b2 * 256) + *upto++; if (upto >= end) return pe_unexpected_end;
         }
     } else if ((type >= 1 && type <= 5) || type == 16 || type == 17 )
     {
@@ -3571,7 +3576,7 @@ inline int32_t get_stobject_length (
     } else if (type == 6) /* AMOUNT */
     {
         length =  (*upto >> 6 == 1) ? 8 : 48;
-        if (upto >= end) return -1;
+        if (upto >= end) return pe_unexpected_end;
     }
 
     if (length > -1)
@@ -3595,10 +3600,10 @@ inline int32_t get_stobject_length (
             DBG_PRINTF("%d get_stobject_length i %d %d-%d, upto %d sublength %d\n", recursion_depth, i,
                     subtype, subfield, upto - start, sublength);
             if (sublength < 0)
-                return -1;
+                return pe_unexpected_end;
             upto += sublength;
             if (upto >= end)
-                return -1;
+                return pe_unexpected_end;
 
             if ((*upto == 0xE1U && type == 0xEU) ||
                 (*upto == 0xF1U && type == 0xFU))
@@ -3608,10 +3613,10 @@ inline int32_t get_stobject_length (
                 return (upto - start);
             }
        }
-       return -5;
+       return pe_excessive_size;
     }
 
-    return -3;
+    return pe_unknown_type_late;
 
 }
 
