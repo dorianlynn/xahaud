@@ -5838,7 +5838,7 @@ public:
             std::chrono::duration_cast<std::chrono::seconds>
             (
                 env.app().getLedgerMaster()
-                    .getValidatedLedger()->info()
+                    .getCurrentLedger()->info()
                         .parentCloseTime
                             .time_since_epoch()
             ).count();
@@ -8890,7 +8890,6 @@ public:
                 M("test state_set 13"),
                 ter(tesSUCCESS));
             env.close();
-            std::cout << "frank ownercount: " << (*env.le("frank"))[sfOwnerCount] << "\n";
             BEAST_EXPECT((*env.le("frank"))[sfOwnerCount] == 260);
         }
         
