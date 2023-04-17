@@ -17,8 +17,11 @@ const err = (x) =>
 }
 // Fails via process.exit
 module.exports = {
-    TestRig: (endpoint)=>
+    TestRig: (endpoint, networkid)=>
     {
+        if (networkid === undefined)
+            networkid = 21338;
+
         return new Promise((resolve, reject)=>
         {
                 const api = new xrpljs.Client(endpoint);
@@ -392,6 +395,7 @@ module.exports = {
                                 TransactionType: "Payment",
                                 Amount: "100000000000",
                                 Destination: acc,
+                                NetworkID: networkid
                             }).then(x=>
                             {
                                 assertTxnSuccess(x);
@@ -484,7 +488,8 @@ module.exports = {
                                         "value": amt + "",
                                         "issuer": issuer.classicAddress
                                     },
-                                    Destination: addr
+                                    Destination: addr,
+                                    NetworkID: networkid
                                 };
 
                                 feeSubmitAccept(issuer.seed, txn).then(x=>
@@ -516,7 +521,8 @@ module.exports = {
                             {
                                 Account: acc.classicAddress,
                                 TransactionType: "AccountSet",
-                                SetFlag: 11
+                                SetFlag: 11,
+                                NetworkID: networkid
                             }).then(x=>
                             {
                                 console.log(x);

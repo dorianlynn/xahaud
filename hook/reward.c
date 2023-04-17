@@ -102,7 +102,10 @@ int64_t hook(uint32_t r)
     int64_t time = slot(0,0,6);
 
     int64_t time_elapsed = ledger_last_time() - time;
-    if (time_elapsed < REWARD_DELAY)
+    int64_t delay = state(0,0, "RD", 2);
+    if (delay <= 0)
+        delay = REWARD_DELAY;
+    if (time_elapsed < delay)
     {
         //2 600 000
         time_elapsed = REWARD_DELAY - time_elapsed;
@@ -157,11 +160,10 @@ int64_t hook(uint32_t r)
         TRACEVAR(accumulator);
 
     // reward hook shares the same namespace as governance hook, so we can request the RR key directly
-    uint8_t key[2] = {'R', 'R'};
 
     // mr = monthly reward rate
     int64_t xfl_mr =
-        state(0,0, SBUF(key));
+        state(0,0, "RR", 2);
 
     if (xfl_mr <= 0 || // invalid xfl
         float_compare(xfl_mr, 0, COMPARE_LESS) ||  // negative xfl

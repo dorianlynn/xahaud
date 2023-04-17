@@ -13,7 +13,7 @@ const print_args = (err)=>
     console.log(
 `Xahau Governance CLI
 Version: ` + version + `
-Usage: node govcli [-f seedfile] wss://node goverance-r-address topic topic-data
+Usage: node govcli [-f seedfile] wss://node networkid goverance-r-address topic topic-data
 Reads from ~/.xahau_governance_seed by default. Use -f to change seed file location.
 Topics:
     Topic           |   Data Type
@@ -29,27 +29,30 @@ Topics:
     BATCH_0         | The amount in drops to reimburse the member at seat 0
     ..              | for xrp swaps that the other members deem have occured
     BATCH_19
+    SETUP           | One time setup invoke
 To delete or unset a previous vote type DELETE instead of the topic-data.
 `
     );
     process.exit(1);
-}
+};
 
 let argv = process.argv;
 let upto = 2;
 
-if (argv.length - upto < 3)
+if (argv.length - upto < 5)
     return print_args();
 
 const seedfile = argv[upto] == '-f' ? argv[upto+1] : os.homedir() + '/.xahau_governance_seed';
+console.log("Seedfile: " + seedfile);
 
 if (argv[upto] == '-f')
     upto += 2;
 
-if (argv.length - upto < 4)
+if (argv.length - upto < 5)
     return print_args();
 
 const uri = argv[upto++];
+const networkid = argv[upto++];
 const address = argv[upto++];
 const topic = argv[upto++].toUpperCase();
 const topic_data_raw = argv[upto ++];
@@ -58,9 +61,11 @@ const is_delete = (topic_data_raw == 'DELETE');
 
 const valid_topics = (()=>
 {
-    let valid_topics = {
-        REWARD_RATE: 1,
-        REWARD_DELAY: 1
+    let valid_topics =
+    {
+        REWARD_RATE:  '5252',
+        REWARD_DELAY: '5244',
+        SETUP: "00"
     };
 
     for (let i = 0; i < 20; ++i)
@@ -78,9 +83,9 @@ if (valid_topics[topic] === undefined)
     return print_args("Invalid topic: `" + topic + "`");
 
 let topic_parts = topic.split("_");
-const topic_type = topic_parts[0];
-const topic_field = topic_parts[1];
-
+let topic_type = topic_parts[0];
+let topic_field = topic_parts[1];
+console.log('URI: ' + uri);
 require('./utils-tests.js').TestRig(uri).then(t=>
 {
 
@@ -174,6 +179,13 @@ require('./utils-tests.js').TestRig(uri).then(t=>
                     "Could not parse provided argument");
             break;
         }
+        case 'SETUP':
+        {
+            topic_data = "";
+            topic_field = "";
+            break;
+        }
+
         default:
             return print_args();
     }
@@ -186,16 +198,19 @@ require('./utils-tests.js').TestRig(uri).then(t=>
     {
         try
         {
-            return fs.readFileSync(seedfile).toString('utf-8');
+            return fs.readFileSync(seedfile).toString('utf-8').trim();
         } catch(e)
         {
             return print_args("Could not read seedfile: " + seedfile + ' ' + e);
         }
     })();
     
+
     const txn =
     {
+        NetworkID: parseInt(networkid + ""),
         TransactionType: "Invoke",
+        Destination: "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh",
         Account: address,
         HookParameters:
         [
@@ -216,7 +231,8 @@ require('./utils-tests.js').TestRig(uri).then(t=>
         ]
     };
 
-    console.log("Submitting...", txn);
+    console.log("Submitting...")
+    console.dir(txn, {depth: 3});
 
     t.feeSubmit(secret,txn).then(x=>
     {
@@ -226,6 +242,6 @@ require('./utils-tests.js').TestRig(uri).then(t=>
 
 
 }).catch(e => {
-    console.log("Could not connect to " + uri);
+    console.log("Could not connect to " + uri + ' (' + e + ')');
     process.exit(1);
 });

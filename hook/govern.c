@@ -15,7 +15,7 @@
  *      Parameter Value: Initial Member Count <1 byte>
  *
  *      Parameter Name: {'I', 'D', 'A'}
- *      Parameter Value: Initial Distribution Amount to each initial member <8 byte BE drops>
+ *      Parameter Value: Initial Distribution Amount to each initial member <8 byte LE drops>
  *
  *      Parameter Name: {'I', 'R', 'R'}
  *      Parameter Value: Initial Reward Rate <8 byte XFL fraction between 0 and 1, LE>
@@ -74,7 +74,7 @@
  *              Parameter Value: The data to vote for this topic (accid, hook hash, reward rate/delay)
  **/
 
-#define SVAR(x) x, sizeof(x)
+#define SVAR(x) &x, sizeof(x)
 
 #define DONE(x)\
     accept(SVAR(x),(uint32_t)__LINE__);
@@ -99,6 +99,7 @@ int64_t hook(uint32_t r)
     hook_account(SBUF(hook_accid));
     
     int64_t member_count = state(0,0, "MC", 2);
+
     if (DEBUG)
         TRACEVAR(member_count);
     
@@ -107,11 +108,16 @@ int64_t hook(uint32_t r)
     int64_t is_distribution = 0;
     int64_t is_setup = member_count == DOESNT_EXIST;
 
+    if (is_setup)
+        member_count = 0;
+
     if (BUFFER_EQUAL_20(hook_accid, account_field + 12))
     {
         uint8_t dest_acc[20];
         if (otxn_field(SBUF(dest_acc), sfDestination) == 20 && !BUFFER_EQUAL_20(hook_accid, dest_acc))
+        {
             DONE("Goverance: Passing outgoing txn.");
+        }
     
         is_distribution = 1;
     }
@@ -125,7 +131,7 @@ int64_t hook(uint32_t r)
     {
         // gather hook parameters
 
-        int64_t imc, ida, irr, ird;
+        uint64_t imc = -1, ida = -1, irr = -1, ird = -1;
         if (hook_param(SVAR(imc), "IMC", 3) < 0)
             NOPE("Governance: Initial Member Count Parameter missing (IMC).");
 
@@ -148,10 +154,18 @@ int64_t hook(uint32_t r)
         if (ird == 0)
             NOPE("Governance: Initial Reward Delay must be > 0.");
 
+        if (DEBUG)
+        {
+            TRACEVAR(imc);
+            TRACEVAR(ida);
+            TRACEVAR(irr);
+            TRACEVAR(ird);
+        }
+
         etxn_reserve(imc);
 
         // set member count
-        ASSERT(state_set(SBUF(imc), "MC", 2));
+        ASSERT(state_set(SVAR(imc), "MC", 2));
 
         // set reward rate
         ASSERT(state_set(SVAR(irr), "RR", 2));
@@ -192,6 +206,10 @@ int64_t hook(uint32_t r)
                                                                 // 0, 0... ACCOUNT ID maps to member_id (as above)
                 // forward key
                 ASSERT(state_set(SVAR(i), SBUF(member_acc)) == 1);
+                if (DEBUG)
+                {
+                    TRACEVAR(i);
+                }
             }
             else if (state(SBUF(member_acc), SVAR(i)) != 20)
                 break;
@@ -210,9 +228,10 @@ int64_t hook(uint32_t r)
 
         }
 
-        DONE(is_setup
-            ? "Governance: Setup completed successfully."
-            : "Governance: Reward distribution completed successfully.");
+        if (is_setup)
+            DONE("Governance: Setup completed successfully.");
+
+        DONE("Governance: Reward distribution completed successfully.");
     }
 
     // otherwise a normal execution (not initial)
