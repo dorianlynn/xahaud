@@ -41,6 +41,7 @@
 #include <test/jtx/last_ledger_sequence.h>
 #include <test/jtx/memo.h>
 #include <test/jtx/multisign.h>
+#include <test/jtx/network.h>
 #include <test/jtx/noop.h>
 #include <test/jtx/offer.h>
 #include <test/jtx/owners.h>

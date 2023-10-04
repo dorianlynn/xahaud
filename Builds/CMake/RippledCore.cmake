@@ -753,6 +753,7 @@ if (tests)
     src/test/app/ValidatorList_test.cpp
     src/test/app/ValidatorSite_test.cpp
     src/test/app/SetHook_test.cpp
+    src/test/app/SetHookTSH_test.cpp
     src/test/app/XahauGenesis_test.cpp
     src/test/app/tx/apply_test.cpp
     #[===============================[
@@ -871,6 +872,7 @@ if (tests)
     src/test/jtx/impl/last_ledger_sequence.cpp
     src/test/jtx/impl/memo.cpp
     src/test/jtx/impl/multisign.cpp
+    src/test/jtx/impl/network.cpp
     src/test/jtx/impl/offer.cpp
     src/test/jtx/impl/owners.cpp
     src/test/jtx/impl/paths.cpp
