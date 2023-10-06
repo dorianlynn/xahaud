@@ -19,7 +19,9 @@ int64_t hook(uint32_t reserved) {
     }
 
     TRACESTR("tsh.c: End.");
-    accept(SBUF(reserved), __LINE__);
+    uint8_t r_buf[4];
+    UINT32_TO_BUF(r_buf, reserved);
+    accept(SBUF(r_buf), __LINE__);
     _g(1,1);
     // unreachable
     return 0;

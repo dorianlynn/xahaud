@@ -4730,6 +4730,17 @@ class Import_test : public beast::unit_test::suite
     }
 
     void
+    testImportBurst(FeatureBitset features)
+    {
+        testcase("import burst");
+
+        using namespace test::jtx;
+        using namespace std::literals;
+
+        
+    }
+
+    void
     testMaxSupply(FeatureBitset features)
     {
         testcase("max supply");
@@ -5493,6 +5504,7 @@ public:
         testAccountIndex(features);
         testHookIssuer(features);
         testImportSequence(features);
+        testImportBurst(features);
         testAccountDelete(features);
         testMaxSupply(features);
         testMinMax(features);

@@ -483,6 +483,9 @@ EscrowFinish::doApply()
         auto const now = ctx_.view().info().parentCloseTime;
 
         // Too soon: can't execute before the finish time
+        std::cout << "now(): " << now.time_since_epoch().count() << "\n";
+        std::cout << "finish(): " << ((*slep)[sfFinishAfter]) << "\n";
+        std::cout << "now()=: " << (now.time_since_epoch().count() > (*slep)[sfFinishAfter]) << "\n";
         if ((*slep)[~sfFinishAfter] && !after(now, (*slep)[sfFinishAfter]))
             return tecNO_PERMISSION;
 

@@ -38,6 +38,14 @@ makeNetworkConfig(
     std::string acct_res,
     std::string owner_res);
 
+std::unique_ptr<Config>
+makeNetworkVLConfig(
+    uint32_t networkID,
+    std::string ref_fee,
+    std::string acct_res,
+    std::string owner_res,
+    std::vector<std::string> keys);
+
 }  // namespace network
 
 }  // namespace jtx

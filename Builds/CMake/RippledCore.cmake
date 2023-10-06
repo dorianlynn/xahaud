@@ -867,7 +867,10 @@ if (tests)
     src/test/jtx/impl/envconfig.cpp
     src/test/jtx/impl/fee.cpp
     src/test/jtx/impl/flags.cpp
+    src/test/jtx/impl/genesis.cpp
+    src/test/jtx/impl/import.cpp
     src/test/jtx/impl/invoice_id.cpp
+    src/test/jtx/impl/invoke.cpp
     src/test/jtx/impl/jtx_json.cpp
     src/test/jtx/impl/last_ledger_sequence.cpp
     src/test/jtx/impl/memo.cpp
@@ -880,6 +883,7 @@ if (tests)
     src/test/jtx/impl/quality2.cpp
     src/test/jtx/impl/rate.cpp
     src/test/jtx/impl/regkey.cpp
+    src/test/jtx/impl/reward.cpp
     src/test/jtx/impl/sendmax.cpp
     src/test/jtx/impl/seq.cpp
     src/test/jtx/impl/sig.cpp

@@ -48,6 +48,43 @@ makeNetworkConfig(
     });
 }
 
+std::unique_ptr<Config>
+makeNetworkVLConfig(
+    uint32_t networkID,
+    std::string ref_fee,
+    std::string acct_res,
+    std::string owner_res,
+    std::vector<std::string> keys)
+{
+    return envconfig([&](std::unique_ptr<Config> cfg) {
+        cfg->NETWORK_ID = networkID;
+        Section config;
+        config.append(
+            {"reference_fee = " + ref_fee,
+                "account_reserve = " + acct_res,
+                "owner_reserve = " + owner_res});
+        auto setup = setup_FeeVote(config);
+        cfg->FEES = setup;
+
+        for (auto const& strPk : keys)
+        {
+            auto pkHex = strUnHex(strPk);
+            if (!pkHex)
+                Throw<std::runtime_error>(
+                    "Import VL Key '" + strPk + "' was not valid hex.");
+
+            auto const pkType = publicKeyType(makeSlice(*pkHex));
+            if (!pkType)
+                Throw<std::runtime_error>(
+                    "Import VL Key '" + strPk +
+                    "' was not a valid key type.");
+
+            cfg->IMPORT_VL_KEYS.emplace(strPk, makeSlice(*pkHex));
+        }
+        return cfg;
+    });
+}
+
 }  // namespace network
 
 }  // namespace jtx

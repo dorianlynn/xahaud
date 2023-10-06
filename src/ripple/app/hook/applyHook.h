@@ -50,7 +50,7 @@ namespace hook
         {ttACCOUNT_DELETE,              tshROLLBACK },
         {ttACCOUNT_SET,                 tshNONE     },
         {ttCHECK_CANCEL,                tshCOLLECT  },
-        {ttCHECK_CASH,                  tshROLLBACK },
+        {ttCHECK_CASH,                  tshNONE     },
         {ttCHECK_CREATE,                tshROLLBACK },
         {ttCLAIM_REWARD,                tshROLLBACK },
         {ttDEPOSIT_PREAUTH,             tshROLLBACK },

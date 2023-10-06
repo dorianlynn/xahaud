@@ -24,16 +24,6 @@ namespace ripple {
 namespace test {
 struct ClaimReward_test : public beast::unit_test::suite
 {
-    static Json::Value
-    claim(jtx::Account const& account)
-    {
-        using namespace jtx;
-        Json::Value jv;
-        jv[jss::TransactionType] = jss::ClaimReward;
-        jv[jss::Account] = account.human();
-        return jv;
-    }
-
     std::unique_ptr<Config>
     makeNetworkConfig(uint32_t networkID)
     {
@@ -143,9 +133,7 @@ struct ClaimReward_test : public beast::unit_test::suite
                     .count();
 
             // CLAIM
-            auto tx = claim(alice);
-            tx[sfIssuer.jsonName] = issuer.human();
-            env(tx, txResult);
+            env(reward::claim(alice, issuer), txResult);
             env.close();
 
             if (withClaimReward)
@@ -190,9 +178,7 @@ struct ClaimReward_test : public beast::unit_test::suite
             env.fund(XRP(1000), alice, issuer);
             env.close();
 
-            auto tx = claim(alice);
-            tx[sfIssuer.jsonName] = issuer.human();
-            env(tx, ter(temDISABLED));
+            env(reward::claim(alice, issuer), ter(temDISABLED));
             env.close();
         }
 
@@ -206,9 +192,7 @@ struct ClaimReward_test : public beast::unit_test::suite
             env.fund(XRP(1000), alice, issuer);
             env.close();
 
-            auto tx = claim(alice);
-            tx[sfIssuer.jsonName] = issuer.human();
-            env(tx, txflags(tfClose), ter(temINVALID_FLAG));
+            env(reward::claim(alice, issuer), txflags(tfClose), ter(temINVALID_FLAG));
             env.close();
         }
     }
@@ -238,7 +222,7 @@ struct ClaimReward_test : public beast::unit_test::suite
             env.fund(XRP(1000), issuer);
             env.close();
 
-            auto tx = claim(alice);
+            auto tx = reward::claim(alice);
             tx[jss::Sequence] = 0;
             tx[jss::Fee] = 10;
             tx[sfIssuer.jsonName] = issuer.human();
@@ -257,9 +241,7 @@ struct ClaimReward_test : public beast::unit_test::suite
             env.fund(XRP(1000), alice, issuer);
             env.close();
 
-            auto tx = claim(alice);
-            tx[sfIssuer.jsonName] = issuer.human();
-            env(tx, txflags(1), ter(temMALFORMED));
+            env(reward::claim(alice, issuer, 1), ter(temMALFORMED));
             env.close();
         }
         {
@@ -270,7 +252,7 @@ struct ClaimReward_test : public beast::unit_test::suite
             env.fund(XRP(1000), alice);
             env.close();
 
-            env(claim(alice), ter(temMALFORMED));
+            env(reward::claim(alice), ter(temMALFORMED));
             env.close();
         }
 
@@ -286,9 +268,7 @@ struct ClaimReward_test : public beast::unit_test::suite
             env.fund(XRP(1000), alice);
             env.close();
 
-            auto tx = claim(alice);
-            tx[sfIssuer.jsonName] = issuer.human();
-            env(tx, ter(tecNO_ISSUER));
+            env(reward::claim(alice, issuer), ter(tecNO_ISSUER));
             env.close();
         }
     }
@@ -319,9 +299,7 @@ struct ClaimReward_test : public beast::unit_test::suite
                     .parentCloseTime.time_since_epoch())
                 .count();
 
-        auto tx = claim(alice);
-        tx[sfIssuer.jsonName] = issuer.human();
-        env(tx, ter(tesSUCCESS));
+        env(reward::claim(alice, issuer), ter(tesSUCCESS));
         env.close();
 
         BEAST_EXPECT(
@@ -330,7 +308,7 @@ struct ClaimReward_test : public beast::unit_test::suite
             true);
 
         // test claim rewards - opt out
-        env(claim(alice), txflags(1), ter(tesSUCCESS));
+        env(reward::claim(alice, std::nullopt, 1), ter(tesSUCCESS));
         env.close();
 
         BEAST_EXPECT(expectNoRewards(env, alice) == true);

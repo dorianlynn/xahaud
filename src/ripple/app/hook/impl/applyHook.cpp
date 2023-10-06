@@ -71,17 +71,12 @@ namespace hook
 
                 return rv.read(keylet::nftoffer(*id));
         };
-            
+
+        std::cout << "TT: " << tt << "\n";
+        std::cout << "canRollback: " << canRollback << "\n";
 
         switch (tt)
         {
-            case ttIMPORT:
-            {
-                if (tx.isFieldPresent(sfIssuer))
-                    ADD_TSH(tx.getAccountID(sfIssuer), canRollback);
-                break;
-            }
-
             case ttURITOKEN_BURN:
             {
                 Keylet const id { ltURI_TOKEN, tx.getFieldH256(sfURITokenID) };
@@ -170,10 +165,9 @@ namespace hook
                 
             }
 
-
-            // NFT
             case ttNFTOKEN_MINT:
             case ttCLAIM_REWARD:
+            case ttIMPORT:
             {
                 if (tx.isFieldPresent(sfIssuer))
                     ADD_TSH(tx.getAccountID(sfIssuer), canRollback);
@@ -262,6 +256,7 @@ namespace hook
 
 
             // self transactions
+            case ttCHECK_CASH:
             case ttURITOKEN_MINT:
             case ttURITOKEN_CANCEL_SELL_OFFER:
             case ttACCOUNT_SET:
@@ -346,16 +341,23 @@ namespace hook
                 break;
             }
 
-            case ttCHECK_CASH:
             case ttCHECK_CANCEL:
             {
                 if (!tx.isFieldPresent(sfCheckID))
+                {
+                    std::cout << "NO CHECK ID" << "\n";
                     return {};
+                }
 
                 auto check = rv.read(Keylet {ltCHECK, tx.getFieldH256(sfCheckID)});
                 if (!check)
+                {
+                    std::cout << "CHECK ID: " << to_string(tx.getFieldH256(sfCheckID)) << "\n";
+                    std::cout << "NO CHECK" << "\n";
                     return {};
+                }
 
+                std::cout << "ttCHECK_CANCEL" << "\n";
                 ADD_TSH(check->getAccountID(sfAccount), true);
                 ADD_TSH(check->getAccountID(sfDestination), canRollback);
                 break;

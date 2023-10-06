@@ -1,5 +1,6 @@
 #include <set>
 #include <string>
+#include <map>
 #ifndef HOOKENUM_INCLUDED
 #define HOOKENUM_INCLUDED 1
 namespace ripple
