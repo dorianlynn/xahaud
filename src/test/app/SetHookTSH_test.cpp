@@ -915,18 +915,30 @@ class SetHookTSH_test : public beast::unit_test::suite
         using namespace test::jtx;
         using namespace std::literals;
 
-        test::jtx::Env env{
+        Env env{
             *this,
             network::makeNetworkConfig(21337, "10", "1000000", "200000"),
-            features};
+            supported_amendments(),
+            nullptr,
+            // beast::severities::kWarning
+            beast::severities::kTrace};
+
+        // test::jtx::Env env{
+        //     *this,
+        //     network::makeNetworkConfig(21337, "10", "1000000", "200000"),
+        //     features};
 
         auto const alice = Account("alice");
         auto const bob = Account("bob");
-        env.fund(XRP(1000), alice, bob);
+        auto const gw = Account{"gateway"};
+        auto const USD = gw["USD"];
+        env.fund(XRP(1000), alice, bob, gw);
         env.close();
 
-        // Strong Execution Account
+        // Weak Execution Account
         {
+            // set tsh collect on bob
+            env(fset(bob, asfTshCollect));
 
             // set tsh hook on alice
             env(hook(bob, {{hso(TshHook, overrideFlag)}}, 0),
@@ -934,8 +946,10 @@ class SetHookTSH_test : public beast::unit_test::suite
                 ter(tesSUCCESS));
             env.close();
 
-            // ttINVOKE
-            env(invoke::invoke(alice, bob), fee(XRP(1)), ter(tesSUCCESS));
+            env(offer(gw, USD(1000), XRP(1000)));
+
+            // ttCREATE_OFFER
+            env(offer(alice, USD(1000), XRP(1000)));
             env.close();
 
             // verify tsh hook triggered
@@ -947,7 +961,7 @@ class SetHookTSH_test : public beast::unit_test::suite
             auto const executions = meta[sfHookExecutions.jsonName];
             auto const execution = executions[0u][sfHookExecution.jsonName];
             BEAST_EXPECT(execution[sfHookResult.jsonName] == 3);
-            BEAST_EXPECT(execution[sfHookReturnString.jsonName] == "00000000");
+            BEAST_EXPECT(execution[sfHookReturnString.jsonName] == "00000001");
         }
     }
 
