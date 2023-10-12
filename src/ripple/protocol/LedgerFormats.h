@@ -177,7 +177,7 @@ enum LedgerEntryType : std::uint16_t
      *
      * \sa keylet::UNLReport
      */
-    ltUNL_REPORT = 0x0052, 
+    ltUNL_REPORT = 0x0052,
 
     //---------------------------------------------------------------------------
     /** A special type, matching any ledger entry type.
