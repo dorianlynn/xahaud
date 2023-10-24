@@ -85,11 +85,20 @@ struct Memory_test : public beast::unit_test::suite
             env(jv1, fee(XRP(2)));
             env.close();
 
+            auto const preSeq = env.current()->info().seq;
+            std::cout << "preSeq: " << preSeq << "\n";
             env(pay(alice, issuer, XRP(10)), fee(XRP(2)));
             for (size_t i = 0; i < 5; i++)
             {
                 env.close();
+
+                // Assuming env has a method getTransactions() that returns a vector of transactions
+                auto ledgerTransactions = env.getTransactions();
+
+                // Add the transactions from this ledger to the main vector
+                transactions.insert(transactions.end(), ledgerTransactions.begin(), ledgerTransactions.end());
             }
+            auto const postSeq = env.current()->info().seq;
             
         }
     }
