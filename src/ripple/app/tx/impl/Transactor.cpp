@@ -1242,6 +1242,152 @@ executeHookChain(
     return tesSUCCESS;
 }
 
+TER
+Transactor::
+executeHookPosition(
+    std::shared_ptr<ripple::STLedgerEntry const> const& hookSLE,
+    hook::HookStateMap& stateMap,
+    std::vector<hook::HookResult>& results,
+    ripple::AccountID const& account,
+    bool strong,
+    std::shared_ptr<STObject const> const& provisionalMeta,
+    uint8_t const& hook_no)
+{
+    std::set<uint256> hookSkips;
+    std::map<
+        uint256,
+        std::map<
+            std::vector<uint8_t>,
+            std::vector<uint8_t>
+        >> hookParamOverrides {};
+
+    auto const& hooks = hookSLE->getFieldArray(sfHooks);
+
+    auto const& hookObj = hooks[hook_no];
+
+    if (!hookObj.isFieldPresent(sfHookHash)) // skip blanks
+        return tecINTERNAL;
+
+    // lookup hook definition
+    uint256 const& hookHash = hookObj.getFieldH256(sfHookHash);
+
+    if (hookSkips.find(hookHash) != hookSkips.end())
+    {
+        JLOG(j_.trace())
+            << "HookInfo: Skipping " << hookHash;
+        return tecINTERNAL;
+    }
+
+    auto const& hookDef = ctx_.view().peek(keylet::hookDefinition(hookHash));
+    if (!hookDef)
+    {
+        JLOG(j_.warn())
+            << "HookError[]: Failure: hook def missing (send)";
+        return tecINTERNAL;
+    }
+
+    // check if the hook can fire
+    uint256 hookOn = (hookObj.isFieldPresent(sfHookOn)
+            ? hookObj.getFieldH256(sfHookOn)
+            : hookDef->getFieldH256(sfHookOn));
+
+    if (!hook::canHook(ctx_.tx.getTxnType(), hookOn))
+        return tecINTERNAL;    // skip if it can't
+
+    uint32_t flags = (hookObj.isFieldPresent(sfFlags) ?
+            hookObj.getFieldU32(sfFlags) : hookDef->getFieldU32(sfFlags));
+
+    JLOG(j_.trace())
+        << "HookChainExecution: " << hookHash
+        << " strong:" << strong << " flags&hsfCOLLECT: " << (flags & hsfCOLLECT); 
+
+    // skip weakly executed hooks that lack a collect flag
+    if (!strong && !(flags & hsfCOLLECT))
+        return tecINTERNAL;
+
+    // fetch the namespace either from the hook object of, if absent, the hook def
+    uint256 const& ns = 
+        (hookObj.isFieldPresent(sfHookNamespace)
+                ?  hookObj.getFieldH256(sfHookNamespace)
+                :  hookDef->getFieldH256(sfHookNamespace));
+
+    // gather parameters
+    std::map<std::vector<uint8_t>, std::vector<uint8_t>> parameters;
+    if (hook::gatherHookParameters(hookDef, hookObj, parameters, j_))
+    {
+        JLOG(j_.warn())
+            << "HookError[]: Failure: gatherHookParameters failed)";
+        return tecINTERNAL;
+    }
+
+    bool hasCallback = hookDef->isFieldPresent(sfHookCallbackFee);
+
+    try
+    {
+        results.push_back(
+            hook::apply(
+                hookDef->getFieldH256(sfHookSetTxnID),
+                hookHash,
+                ns,
+                hookDef->getFieldVL(sfCreateCode),
+                parameters,
+                hookParamOverrides,
+                stateMap,
+                ctx_,
+                account,
+                hasCallback,
+                false,
+                strong,
+                (strong ? 0 : 1UL),             // 0 = strong, 1 = weak
+                hook_no - 1,
+                provisionalMeta));
+
+        executedHookCount_++;
+
+        hook::HookResult& hookResult = results.back();
+
+        if (hookResult.exitType != hook_api::ExitType::ACCEPT)
+        {
+            if (results.back().exitType == hook_api::ExitType::WASM_ERROR)
+            {
+                JLOG(j_.warn()) 
+                    << "HookError[" << account << "-" << ctx_.tx.getAccountID(sfAccount) << "]: "
+                    << "]: Execution failure (graceful) "
+                    << "HookHash: " << hookHash;
+            }
+            return tecHOOK_REJECTED;
+        }
+
+        // gather skips
+        for (uint256 const& hash : hookResult.hookSkips)
+            if (hookSkips.find(hash) == hookSkips.end())
+                hookSkips.emplace(hash);
+
+        // gather overrides
+        auto const& resultOverrides = hookResult.hookParamOverrides;
+        for (auto const& [hash, params] : resultOverrides)
+        {
+            if (hookParamOverrides.find(hash) == hookParamOverrides.end())
+                hookParamOverrides[hash] = {};
+
+            auto& overrides = hookParamOverrides[hash];
+            for (auto const& [k, v] : params)
+                overrides[k] = v;
+        }
+    }
+    catch (std::exception& e)
+    {
+        JLOG(j_.warn()) 
+            << "HookError[" << account << "-" << ctx_.tx.getAccountID(sfAccount) << "]: "
+            << "]: Execution failure (exceptional) "
+            << "Exception: " << e.what()
+            << " HookHash: " << hookHash;
+
+        return tecHOOK_REJECTED;
+    }
+    return tesSUCCESS;
+}
+
 void
 Transactor::doHookCallback(std::shared_ptr<STObject const> const& provisionalMeta)
 {
@@ -1428,6 +1574,8 @@ doTSH(
     // but we also don't want to execute any hooks
     // twice, so keep track as we go with a map
     std::set<AccountID> alreadyProcessed;
+
+    // uint32_t hookPos = ctx_.tx.getFieldU32(sfHookPosition);
 
     for (auto& [tshAccountID, canRollback] : tsh)
     {

@@ -53,12 +53,12 @@ struct Memory_test : public beast::unit_test::suite
 
         // Test that hook can reject and does NOT mint the funds.
         {
-            // test::jtx::Env env{*this, makeNetworkConfig(21337)};
-            test::jtx::Env env{
-                *this,
-                makeNetworkConfig(21337),
-                nullptr,
-                beast::severities::kTrace};
+            test::jtx::Env env{*this, makeNetworkConfig(21337)};
+            // test::jtx::Env env{
+            //     *this,
+            //     makeNetworkConfig(21337),
+            //     nullptr,
+            //     beast::severities::kTrace};
 
             auto const alice = Account("alice");
             auto const issuer = Account("issuer");
@@ -88,18 +88,32 @@ struct Memory_test : public beast::unit_test::suite
             auto const preSeq = env.current()->info().seq;
             std::cout << "preSeq: " << preSeq << "\n";
             env(pay(alice, issuer, XRP(10)), fee(XRP(2)));
-            for (size_t i = 0; i < 5; i++)
+            env.close();
+
+            std::vector<std::shared_ptr<STTx const>> txns;
+            for (int i = 0; i < 10; ++i)
             {
-                env.close();
-
-                // Assuming env has a method getTransactions() that returns a vector of transactions
-                auto ledgerTransactions = env.getTransactions();
-
-                // Add the transactions from this ledger to the main vector
-                transactions.insert(transactions.end(), ledgerTransactions.begin(), ledgerTransactions.end());
+                if(auto tx = env.tx())
+                {
+                    std::cout << "close(): " << i << "\n";
+                    txns.emplace_back(tx);
+                    env.close();
+                }
             }
-            auto const postSeq = env.current()->info().seq;
-            
+            std::cout << "txns.size(): " << txns.size() << "\n";
+            BEAST_EXPECT(txns.size() == 4);
+            // const char* COMMAND = jss::tx.c_str();
+            // for (size_t i = 0; i < txns.size(); ++i)
+            // {
+            //     auto const& tx = txns[i];
+            //     std::cout << "tx: " << to_string(tx->getTransactionID()) << "\n";
+            //     auto const result = env.rpc(COMMAND, to_string(tx->getTransactionID()));
+            //     auto const meta = jrr[jss::result][jss::meta];
+            //     auto const emissions = meta[sfHookEmissions.jsonName];
+            //     auto const emission = emissions[0u][sfHookEmission.jsonName];
+            //     auto const txId = emission[sfEmittedTxnID.jsonName];
+            //     std::cout << "result: " << result << "\n";
+            // }
         }
     }
 

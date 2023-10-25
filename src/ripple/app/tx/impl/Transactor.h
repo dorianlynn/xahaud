@@ -217,6 +217,16 @@ protected:
         bool strong,
         std::shared_ptr<STObject const> const& provisionalMeta);
 
+    TER
+    executeHookPosition(
+        std::shared_ptr<ripple::STLedgerEntry const> const& hookSLE,
+        hook::HookStateMap& stateMap,
+        std::vector<hook::HookResult>& results,
+        ripple::AccountID const& account,
+        bool strong,
+        std::shared_ptr<STObject const> const& provisionalMeta,
+        uint8_t const& hook_no);
+
 
     void
     addWeakTSHFromSandbox(detail::ApplyViewBase const& pv);
