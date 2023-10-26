@@ -36,7 +36,7 @@ struct Memory_test : public beast::unit_test::suite
         hook[jss::Hook][jss::HookNamespace] =
             "0000000000000000000000000000000000000000000000000000000000000000";
         hook[jss::Hook][jss::HookApiVersion] = 0;
-        hook[jss::Hook][jss::Flags] = 5;
+        hook[jss::Hook][jss::Flags] = 1;
         hook[jss::Hook][jss::CreateCode] = strHex(XahauGenesis::AcceptHook);
         return hook;
     }
@@ -166,7 +166,11 @@ struct Memory_test : public beast::unit_test::suite
         using namespace test::jtx;
         using namespace std::literals;
         {
-            test::jtx::Env env{*this, makeNetworkConfig(21337)};
+            test::jtx::Env env{
+                *this,
+                makeNetworkConfig(21337),
+                nullptr,
+                beast::severities::kTrace};
 
             auto const alice = Account("alice");
             auto const issuer = Account("issuer");
@@ -204,14 +208,13 @@ struct Memory_test : public beast::unit_test::suite
         using namespace test::jtx;
         using namespace std::literals;
 
-        // Test that hook can reject and does NOT mint the funds.
         {
-            test::jtx::Env env{*this, makeNetworkConfig(21337)};
-            // test::jtx::Env env{
-            //     *this,
-            //     makeNetworkConfig(21337),
-            //     nullptr,
-            //     beast::severities::kTrace};
+            // test::jtx::Env env{*this, makeNetworkConfig(21337)};
+            test::jtx::Env env{
+                *this,
+                makeNetworkConfig(21337),
+                nullptr,
+                beast::severities::kTrace};
 
             auto const alice = Account("alice");
             auto const issuer = Account("issuer");
@@ -238,8 +241,6 @@ struct Memory_test : public beast::unit_test::suite
             env(jv1, fee(XRP(2)));
             env.close();
 
-            auto const preSeq = env.current()->info().seq;
-            std::cout << "preSeq: " << preSeq << "\n";
             env(pay(alice, issuer, XRP(10)), fee(XRP(2)));
             env.close();
 
@@ -291,8 +292,8 @@ public:
     {
         using namespace test::jtx;
         auto const sa = supported_amendments();
-        // testWithFeats(sa);
-        testProfiling(sa);
+        testWithFeats(sa);
+        // testProfiling(sa);
     }
 };
 
