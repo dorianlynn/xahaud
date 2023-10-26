@@ -25,6 +25,41 @@ namespace ripple {
 namespace test {
 struct Memory_test : public beast::unit_test::suite
 {
+    Json::Value
+    getAcceptHook()
+    {
+        using namespace jtx;
+        Json::Value hook;
+        hook[jss::Hook] = Json::objectValue;
+        hook[jss::Hook][jss::HookOn] =
+            "0000000000000000000000000000000000000000000000000000000000000000";
+        hook[jss::Hook][jss::HookNamespace] =
+            "0000000000000000000000000000000000000000000000000000000000000000";
+        hook[jss::Hook][jss::HookApiVersion] = 0;
+        hook[jss::Hook][jss::Flags] = 5;
+        hook[jss::Hook][jss::CreateCode] = strHex(XahauGenesis::AcceptHook);
+        return hook;
+    }
+
+    Json::Value
+    setAcceptHook(jtx::Account const& account)
+    {
+        using namespace jtx;
+        Json::Value tx;
+        tx[jss::Account] = account.human();
+        tx[jss::TransactionType] = "SetHook";
+        tx[jss::Hooks] = Json::arrayValue;
+        tx[jss::Hooks][0u] = Json::objectValue;
+        tx[jss::Hooks][0u][jss::Hook] = Json::objectValue;
+        tx[jss::Hooks][0u][jss::Hook][jss::HookOn] =
+            "0000000000000000000000000000000000000000000000000000000000000000";
+        tx[jss::Hooks][0u][jss::Hook][jss::HookNamespace] =
+            "0000000000000000000000000000000000000000000000000000000000000000";
+        tx[jss::Hooks][0u][jss::Hook][jss::HookApiVersion] = 0;
+        tx[jss::Hooks][0u][jss::Hook][jss::Flags] = 5;
+        tx[jss::Hooks][0u][jss::Hook][jss::CreateCode] = strHex(XahauGenesis::AcceptHook);
+        return tx;
+    }
 
     std::unique_ptr<Config>
     makeNetworkConfig(uint32_t networkID)
@@ -41,6 +76,124 @@ struct Memory_test : public beast::unit_test::suite
             cfg->FEES = setup;
             return cfg;
         });
+    }
+
+    void
+    profilePaymentNoHook(FeatureBitset features)
+    {
+        testcase("no hook tx");
+
+        using namespace test::jtx;
+        using namespace std::literals;
+        {
+            test::jtx::Env env{*this, makeNetworkConfig(21337)};
+
+            auto const alice = Account("alice");
+            auto const issuer = Account("issuer");
+            env.fund(XRP(10000), alice, issuer);
+            env.close();
+
+            env(pay(alice, issuer, XRP(10)), fee(XRP(2)));
+            env.close();
+        }
+    }
+
+    void
+    profilePaymentOneHook(FeatureBitset features)
+    {
+        testcase("one hook tx");
+
+        using namespace test::jtx;
+        using namespace std::literals;
+        {
+            test::jtx::Env env{*this, makeNetworkConfig(21337)};
+
+            auto const alice = Account("alice");
+            auto const issuer = Account("issuer");
+            env.fund(XRP(10000), alice, issuer);
+            env.close();
+
+            Json::Value tx;
+            tx[jss::Account] = alice.human();
+            tx[jss::TransactionType] = "SetHook";
+            tx[jss::Hooks] = Json::arrayValue;
+            for(int i = 0; i < 1; i++) {
+                tx[jss::Hooks][i] = getAcceptHook();
+            }
+
+            env(tx, fee(XRP(10)));
+
+            env(pay(alice, issuer, XRP(10)), fee(XRP(2)));
+            env.close();
+        }
+    }
+
+    void
+    profilePaymentMaxHook(FeatureBitset features)
+    {
+        testcase("max hook tx");
+
+        using namespace test::jtx;
+        using namespace std::literals;
+        {
+            test::jtx::Env env{*this, makeNetworkConfig(21337)};
+
+            auto const alice = Account("alice");
+            auto const issuer = Account("issuer");
+            env.fund(XRP(10000), alice, issuer);
+            env.close();
+
+            Json::Value tx;
+            tx[jss::Account] = alice.human();
+            tx[jss::TransactionType] = "SetHook";
+            tx[jss::Hooks] = Json::arrayValue;
+            for(int i = 0; i < 10; i++) {
+                tx[jss::Hooks][i] = getAcceptHook();
+            }
+
+            env(tx, fee(XRP(10)));
+
+            env(pay(alice, issuer, XRP(10)), fee(XRP(2)));
+            env.close();
+        }
+    }
+
+    void
+    profilePaymentMaxHookBoth(FeatureBitset features)
+    {
+        testcase("max hook tx both");
+
+        using namespace test::jtx;
+        using namespace std::literals;
+        {
+            test::jtx::Env env{*this, makeNetworkConfig(21337)};
+
+            auto const alice = Account("alice");
+            auto const issuer = Account("issuer");
+            env.fund(XRP(10000), alice, issuer);
+            env.close();
+
+            Json::Value tx1;
+            tx1[jss::Account] = alice.human();
+            tx1[jss::TransactionType] = "SetHook";
+            tx1[jss::Hooks] = Json::arrayValue;
+            for(int i = 0; i < 10; i++) {
+                tx1[jss::Hooks][i] = getAcceptHook();
+            }
+            env(tx1, fee(XRP(10)));
+
+            Json::Value tx2;
+            tx2[jss::Account] = issuer.human();
+            tx2[jss::TransactionType] = "SetHook";
+            tx2[jss::Hooks] = Json::arrayValue;
+            for(int i = 0; i < 10; i++) {
+                tx2[jss::Hooks][i] = getAcceptHook();
+            }
+            env(tx2, fee(XRP(10)));
+
+            env(pay(alice, issuer, XRP(10)), fee(XRP(2)));
+            env.close();
+        }
     }
 
     void
@@ -118,6 +271,15 @@ struct Memory_test : public beast::unit_test::suite
     }
 
     void
+    testProfiling(FeatureBitset features)
+    {
+        profilePaymentNoHook(features);
+        profilePaymentOneHook(features);
+        profilePaymentMaxHook(features);
+        profilePaymentMaxHookBoth(features);
+    }
+
+    void
     testWithFeats(FeatureBitset features)
     {
         testHookTest(features);
@@ -129,7 +291,8 @@ public:
     {
         using namespace test::jtx;
         auto const sa = supported_amendments();
-        testWithFeats(sa);
+        // testWithFeats(sa);
+        testProfiling(sa);
     }
 };
 
