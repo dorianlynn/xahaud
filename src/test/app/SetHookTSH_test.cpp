@@ -941,7 +941,7 @@ class SetHookTSH_test : public beast::unit_test::suite
             env(fset(bob, asfTshCollect));
 
             // set tsh hook on alice
-            env(hook(bob, {{hso(TshHook, overrideFlag)}}, 0),
+            env(hook(bob, {{hso(TshHook, collectFlag)}}, 0),
                 fee(XRP(1)),
                 ter(tesSUCCESS));
             env.close();
@@ -973,18 +973,18 @@ class SetHookTSH_test : public beast::unit_test::suite
         using namespace test::jtx;
         using namespace std::literals;
 
-        Env env{
-            *this,
-            network::makeNetworkConfig(21337, "10", "1000000", "200000"),
-            supported_amendments(),
-            nullptr,
-            // beast::severities::kWarning
-            beast::severities::kTrace};
-
-        // test::jtx::Env env{
+        // Env env{
         //     *this,
         //     network::makeNetworkConfig(21337, "10", "1000000", "200000"),
-        //     features};
+        //     supported_amendments(),
+        //     nullptr,
+        //     // beast::severities::kWarning
+        //     beast::severities::kTrace};
+
+        test::jtx::Env env{
+            *this,
+            network::makeNetworkConfig(21337, "10", "1000000", "200000"),
+            features};
 
         auto const alice = Account("alice");
         auto const bob = Account("bob");
@@ -1032,7 +1032,7 @@ class SetHookTSH_test : public beast::unit_test::suite
             env(fset(bob, asfTshCollect));
 
             // set tsh hook on alice
-            env(hook(bob, {{hso(TshHook, overrideFlag)}}, 0),
+            env(hook(bob, {{hso(TshHook, collectFlag)}}, 0),
                 fee(XRP(1)),
                 ter(tesSUCCESS));
             env.close();
@@ -1046,11 +1046,9 @@ class SetHookTSH_test : public beast::unit_test::suite
             params[jss::transaction] =
                 env.tx()->getJson(JsonOptions::none)[jss::hash];
             auto const jrr = env.rpc("json", "tx", to_string(params));
-            std::cout << "jrr: " << jrr << "\n";
             auto const meta = jrr[jss::result][jss::meta];
             auto const executions = meta[sfHookExecutions.jsonName];
             auto const execution = executions[0u][sfHookExecution.jsonName];
-            std::cout << "execution: " << execution << "\n";
             BEAST_EXPECT(execution[sfHookResult.jsonName] == 3);
             BEAST_EXPECT(execution[sfHookReturnString.jsonName] == "00000001");
         }
