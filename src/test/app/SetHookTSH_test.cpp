@@ -965,6 +965,89 @@ class SetHookTSH_test : public beast::unit_test::suite
         }
     }
 
+    void
+    testPaymentTSH(FeatureBitset features)
+    {
+        testcase("payment tsh");
+
+        using namespace test::jtx;
+        using namespace std::literals;
+
+        // Env env{
+        //     *this,
+        //     network::makeNetworkConfig(21337, "10", "1000000", "200000"),
+        //     supported_amendments(),
+        //     nullptr,
+        //     // beast::severities::kWarning
+        //     beast::severities::kTrace};
+
+        test::jtx::Env env{
+            *this,
+            network::makeNetworkConfig(21337, "10", "1000000", "200000"),
+            features};
+
+        auto const alice = Account("alice");
+        auto const bob = Account("bob");
+        auto const gw = Account{"gateway"};
+        auto const USD = gw["USD"];
+        env.fund(XRP(1000), alice, bob, gw);
+        env.close();
+
+        // Strong Execution Destination
+        {
+
+            // set tsh hook on alice
+            env(hook(alice, {{hso(TshHook, overrideFlag)}}, 0),
+                fee(XRP(1)),
+                ter(tesSUCCESS));
+            env.close();
+
+            // ttPAYMENT
+            env(pay(bob, alice, XRP(1)), fee(XRP(1)));
+
+            // verify tsh hook triggered
+            Json::Value params;
+            params[jss::transaction] =
+                env.tx()->getJson(JsonOptions::none)[jss::hash];
+            auto const jrr = env.rpc("json", "tx", to_string(params));
+            auto const meta = jrr[jss::result][jss::meta];
+            auto const executions = meta[sfHookExecutions.jsonName];
+            auto const execution = executions[0u][sfHookExecution.jsonName];
+            std::cout << "execution: " << execution << "\n";
+            BEAST_EXPECT(execution[sfHookResult.jsonName] == 3);
+            BEAST_EXPECT(execution[sfHookReturnString.jsonName] == "00000000");
+        }
+
+        // // Weak Execution Account
+        // {
+        //     // set tsh collect on bob
+        //     env(fset(bob, asfTshCollect));
+
+        //     // set tsh hook on alice
+        //     env(hook(bob, {{hso(TshHook, overrideFlag)}}, 0),
+        //         fee(XRP(1)),
+        //         ter(tesSUCCESS));
+        //     env.close();
+
+        //     env(offer(gw, USD(1000), XRP(1000)));
+
+        //     // ttCREATE_OFFER
+        //     env(offer(alice, USD(1000), XRP(1000)));
+        //     env.close();
+
+        //     // verify tsh hook triggered
+        //     Json::Value params;
+        //     params[jss::transaction] =
+        //         env.tx()->getJson(JsonOptions::none)[jss::hash];
+        //     auto const jrr = env.rpc("json", "tx", to_string(params));
+        //     auto const meta = jrr[jss::result][jss::meta];
+        //     auto const executions = meta[sfHookExecutions.jsonName];
+        //     auto const execution = executions[0u][sfHookExecution.jsonName];
+        //     BEAST_EXPECT(execution[sfHookResult.jsonName] == 3);
+        //     BEAST_EXPECT(execution[sfHookReturnString.jsonName] == "00000001");
+        // }
+    }
+
 private:
     // helper
     void static overrideFlag(Json::Value& jv)
@@ -993,8 +1076,8 @@ public:
         // testImportTSH(features);
         // testInvokeTSH(features);
         // testOfferCancelTSH(features); // NO TSH
-        testOfferCreateTSH(features);
-        // testPaymentTSH(features);
+        // testOfferCreateTSH(features);
+        testPaymentTSH(features);
         // testPaymentChannelClaimTSH(features);
         // testPaymentChannelCreateTSH(features);
         // testPaymentChannelFundTSH(features);
