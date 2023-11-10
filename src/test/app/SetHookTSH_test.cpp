@@ -20,6 +20,7 @@
 #include <ripple/app/tx/impl/XahauGenesis.h>
 #include <ripple/core/ConfigSections.h>
 #include <ripple/protocol/Feature.h>
+#include <ripple/protocol/PayChan.h>
 #include <ripple/protocol/jss.h>
 #include <test/app/Import_json.h>
 #include <test/jtx.h>
@@ -973,29 +974,20 @@ class SetHookTSH_test : public beast::unit_test::suite
         using namespace test::jtx;
         using namespace std::literals;
 
-        // Env env{
-        //     *this,
-        //     network::makeNetworkConfig(21337, "10", "1000000", "200000"),
-        //     supported_amendments(),
-        //     nullptr,
-        //     // beast::severities::kWarning
-        //     beast::severities::kTrace};
-
-        test::jtx::Env env{
-            *this,
-            network::makeNetworkConfig(21337, "10", "1000000", "200000"),
-            features};
-
-        auto const alice = Account("alice");
-        auto const bob = Account("bob");
-        auto const carol = Account("carol");
-        auto const gw = Account{"gateway"};
-        auto const USD = gw["USD"];
-        env.fund(XRP(1000), alice, bob, carol, gw);
-        env.close();
-
         // Strong Execution Destination
         {
+            test::jtx::Env env{
+                *this,
+                network::makeNetworkConfig(21337, "10", "1000000", "200000"),
+                features};
+
+            auto const alice = Account("alice");
+            auto const bob = Account("bob");
+            auto const carol = Account("carol");
+            auto const gw = Account{"gateway"};
+            auto const USD = gw["USD"];
+            env.fund(XRP(1000), alice, bob, carol, gw);
+            env.close();
 
             // set tsh hook on alice
             env(hook(alice, {{hso(TshHook, overrideFlag)}}, 0),
@@ -1021,6 +1013,19 @@ class SetHookTSH_test : public beast::unit_test::suite
 
         // Weak Execution Account (Rippling)
         {
+            test::jtx::Env env{
+                *this,
+                network::makeNetworkConfig(21337, "10", "1000000", "200000"),
+                features};
+
+            auto const alice = Account("alice");
+            auto const bob = Account("bob");
+            auto const carol = Account("carol");
+            auto const gw = Account{"gateway"};
+            auto const USD = gw["USD"];
+            env.fund(XRP(1000), alice, bob, carol, gw);
+            env.close();
+
             // setup rippling
             auto const USDA = alice["USD"];
             auto const USDB = bob["USD"];
@@ -1039,6 +1044,109 @@ class SetHookTSH_test : public beast::unit_test::suite
 
             // ttPAYMENT
             env(pay(alice, carol, USDB(10)), paths(USDA), fee(XRP(1)));
+            env.close();
+
+            // verify tsh hook triggered
+            Json::Value params;
+            params[jss::transaction] =
+                env.tx()->getJson(JsonOptions::none)[jss::hash];
+            auto const jrr = env.rpc("json", "tx", to_string(params));
+            auto const meta = jrr[jss::result][jss::meta];
+            auto const executions = meta[sfHookExecutions.jsonName];
+            auto const execution = executions[0u][sfHookExecution.jsonName];
+            BEAST_EXPECT(execution[sfHookResult.jsonName] == 3);
+            BEAST_EXPECT(execution[sfHookReturnString.jsonName] == "00000001");
+        }
+    }
+
+    // PAYCHAN HELPER FUNCTIONS
+    static uint256
+    channel(
+        jtx::Account const& account,
+        jtx::Account const& dst,
+        std::uint32_t seqProxyValue)
+    {
+        auto const k = keylet::payChan(account, dst, seqProxyValue);
+        return k.key;
+    }
+
+    static Buffer
+    signClaimAuth(
+        PublicKey const& pk,
+        SecretKey const& sk,
+        uint256 const& channel,
+        STAmount const& authAmt)
+    {
+        Serializer msg;
+        serializePayChanAuthorization(msg, channel, authAmt.xrp());
+        return sign(pk, sk, msg.slice());
+    }
+
+    void
+    testPaymentChannelClaimTSH(FeatureBitset features)
+    {
+        testcase("payment channel claim tsh");
+
+        using namespace test::jtx;
+        using namespace std::literals;
+
+        test::jtx::Env env{
+            *this,
+            network::makeNetworkConfig(21337, "10", "1000000", "200000"),
+            features};
+
+        auto const alice = Account("alice");
+        auto const bob = Account("bob");
+        auto const gw = Account{"gateway"};
+        auto const USD = gw["USD"];
+        env.fund(XRP(1000), alice, bob, gw);
+        env.close();
+
+        // ttPAYCHAN_CREATE
+        auto const pk = alice.pk();
+        auto const settleDelay = 100s;
+        auto const chan = channel(alice, bob, env.seq(alice));
+        env(paychan::create(alice, bob, XRP(10), settleDelay, pk), fee(XRP(1)));
+        env.close();
+
+        // set tsh collect on bob
+        env(fset(bob, asfTshCollect));
+
+        // set tsh hook on alice
+        env(hook(bob, {{hso(TshHook, collectFlag)}}, 0),
+            fee(XRP(1)),
+            ter(tesSUCCESS));
+        env.close();
+
+        auto const delta = XRP(1);
+        auto const reqBal = delta;
+        auto const authAmt = reqBal + XRP(1);
+
+        // // Strong Execution Destination
+        // {
+
+        //     // ttPAYCHAN_CLAIM - Account
+        //     auto const sig = signClaimAuth(alice.pk(), alice.sk(), chan, authAmt);
+        //     env(paychan::claim(bob, chan, reqBal, authAmt, Slice(sig), alice.pk()), fee(XRP(1)));
+        //     env.close();
+
+        //     // verify tsh hook triggered
+        //     Json::Value params;
+        //     params[jss::transaction] =
+        //         env.tx()->getJson(JsonOptions::none)[jss::hash];
+        //     auto const jrr = env.rpc("json", "tx", to_string(params));
+        //     auto const meta = jrr[jss::result][jss::meta];
+        //     auto const executions = meta[sfHookExecutions.jsonName];
+        //     auto const execution = executions[0u][sfHookExecution.jsonName];
+        //     BEAST_EXPECT(execution[sfHookResult.jsonName] == 3);
+        //     BEAST_EXPECT(execution[sfHookReturnString.jsonName] == "00000000");
+        // }
+
+        // Weak Execution Destination
+        {
+
+            // ttPAYCHAN_CLAIM - Account
+            env(paychan::claim(alice, chan, reqBal, authAmt), fee(XRP(1)));
             env.close();
 
             // verify tsh hook triggered
@@ -1083,8 +1191,8 @@ public:
         // testInvokeTSH(features);
         // testOfferCancelTSH(features); // NO TSH
         // testOfferCreateTSH(features);
-        testPaymentTSH(features);
-        // testPaymentChannelClaimTSH(features);
+        // testPaymentTSH(features);
+        testPaymentChannelClaimTSH(features);
         // testPaymentChannelCreateTSH(features);
         // testPaymentChannelFundTSH(features);
         // testSetHookTSH(features); // NO TSH

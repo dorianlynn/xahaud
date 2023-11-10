@@ -336,6 +336,8 @@ namespace hook
                 if (!chan)
                     return {};
 
+                std::cout << "ttPAYCHAN_CLAIM || ttPAYCHAN_FUND" << "\n";
+                std::cout << "canRollback: " << canRollback << "\n";
                 ADD_TSH(chan->getAccountID(sfAccount), true);
                 ADD_TSH(chan->getAccountID(sfDestination), canRollback);
                 break;

@@ -880,6 +880,7 @@ if (tests)
     src/test/jtx/impl/owners.cpp
     src/test/jtx/impl/paths.cpp
     src/test/jtx/impl/pay.cpp
+    src/test/jtx/impl/paychan.cpp
     src/test/jtx/impl/quality2.cpp
     src/test/jtx/impl/rate.cpp
     src/test/jtx/impl/regkey.cpp
