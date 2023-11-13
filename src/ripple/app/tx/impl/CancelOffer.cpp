@@ -39,7 +39,7 @@ CancelOffer::preflight(PreflightContext const& ctx)
         return temINVALID_FLAG;
     }
 
-    if (!ctx.tx[sfOfferSequence])
+    if (ctx.tx[sfOfferSequence] == 0 && !ctx.tx[~sfOfferID])
     {
         JLOG(ctx.j.trace()) << "CancelOffer::preflight: missing sequence";
         return temBAD_SEQUENCE;
