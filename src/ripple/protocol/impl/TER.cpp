@@ -103,6 +103,7 @@ transResults()
         MAKE_ERROR(tefINTERNAL,                    "Internal error."),
         MAKE_ERROR(tefMASTER_DISABLED,             "Master key is disabled."),
         MAKE_ERROR(tefMAX_LEDGER,                  "Ledger sequence too high."),
+        MAKE_ERROR(tefMAX_NAMESPACES,              "Cannot have more than 256 namespaces."),
         MAKE_ERROR(tefNO_AUTH_REQUIRED,            "Auth is not required."),
         MAKE_ERROR(tefNOT_MULTI_SIGNING,           "Account has no appropriate list of multi-signers."),
         MAKE_ERROR(tefPAST_SEQ,                    "This sequence number has already passed."),
